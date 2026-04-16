@@ -1,0 +1,196 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.autoUpdateService = exports.AutoUpdateService = void 0;
+const electron_updater_1 = require("electron-updater");
+const messaging_service_1 = require("./messaging.service");
+const linux_package_updater_service_1 = require("./linux-package-updater.service");
+/**
+ * AutoUpdateService
+ *
+ * Manages automatic application updates via GitHub Releases using electron-updater.
+ * Downloads updates silently in the background, then notifies the renderer so the
+ * user can choose when to restart and apply the update.
+ *
+ * Platform support:
+ *   - Windows (NSIS .exe)  → full auto-update via electron-updater + latest.yml
+ *   - Linux   (AppImage)   → full auto-update via electron-updater + latest-linux.yml
+ *   - Linux   (.deb/.rpm)  → custom updater via GitHub Releases API + pkexec install
+ *   - macOS   (dmg)        → full auto-update via electron-updater + latest-mac.yml (requires code-signing)
+ *
+ * Headless mode is excluded since there is no GUI to prompt for restart.
+ */
+class AutoUpdateService {
+    constructor() {
+        this.updateDownloaded = false;
+        this.supported = true;
+        /** When true, delegate to LinuxPackageUpdaterService instead of electron-updater */
+        this.useLinuxPackageUpdater = false;
+        /** Last status payload — replayed to renderers that connect after the event fired */
+        this.lastStatus = null;
+        // Skip auto-update in headless mode — no GUI to show prompts
+        if (process.argv.includes('--headless')) {
+            this.supported = false;
+            console.log('[AutoUpdateService] Auto-update disabled in headless mode.');
+            return;
+        }
+        // On Linux, auto-update only works natively for AppImage installs.
+        // For .deb/.rpm we fall back to the custom Linux package updater.
+        if (process.platform === 'linux' && !process.env.APPIMAGE) {
+            if (linux_package_updater_service_1.linuxPackageUpdaterService.isSupported()) {
+                this.useLinuxPackageUpdater = true;
+                console.log('[AutoUpdateService] Using Linux package updater for .deb/.rpm.');
+            }
+            else {
+                this.supported = false;
+                console.log('[AutoUpdateService] Auto-update disabled — no supported package manager detected.');
+            }
+            return;
+        }
+        // Do NOT auto-download — the user decides when to download and install.
+        // autoInstallOnAppQuit is also disabled for the same reason.
+        electron_updater_1.autoUpdater.autoDownload = false;
+        electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;
+        this.setupEventHandlers();
+    }
+    /**
+     * Wire up electron-updater events to broadcast status via the messaging service.
+     */
+    setupEventHandlers() {
+        const broadcast = (payload) => {
+            this.lastStatus = payload;
+            messaging_service_1.messagingService.sendToAllRenderers('app-update-status', payload);
+        };
+        electron_updater_1.autoUpdater.on('checking-for-update', () => {
+            console.log('[AutoUpdateService] Checking for application update...');
+            broadcast({ status: 'checking' });
+        });
+        electron_updater_1.autoUpdater.on('update-available', (info) => {
+            console.log(`[AutoUpdateService] Update available: v${info.version}`);
+            broadcast({
+                status: 'available',
+                version: info.version,
+                releaseNotes: info.releaseNotes,
+                releaseDate: info.releaseDate,
+            });
+        });
+        electron_updater_1.autoUpdater.on('update-not-available', (info) => {
+            console.log(`[AutoUpdateService] App is up to date (v${info.version})`);
+            broadcast({
+                status: 'up-to-date',
+                version: info.version,
+            });
+        });
+        electron_updater_1.autoUpdater.on('download-progress', (progress) => {
+            console.log(`[AutoUpdateService] Download progress: ${progress.percent.toFixed(1)}%`);
+            broadcast({
+                status: 'downloading',
+                percent: progress.percent,
+                bytesPerSecond: progress.bytesPerSecond,
+                transferred: progress.transferred,
+                total: progress.total,
+            });
+        });
+        electron_updater_1.autoUpdater.on('update-downloaded', (info) => {
+            console.log(`[AutoUpdateService] Update downloaded: v${info.version}`);
+            this.updateDownloaded = true;
+            broadcast({
+                status: 'downloaded',
+                version: info.version,
+                releaseNotes: info.releaseNotes,
+                releaseDate: info.releaseDate,
+            });
+        });
+        electron_updater_1.autoUpdater.on('error', (err) => {
+            console.error('[AutoUpdateService] Update error:', err.message);
+            broadcast({
+                status: 'error',
+                error: err.message,
+            });
+        });
+    }
+    /**
+     * Check for updates. Call this on app ready and/or on a periodic interval.
+     * No-ops gracefully on unsupported platforms or headless mode.
+     */
+    async checkForUpdates() {
+        if (!this.supported)
+            return;
+        if (this.useLinuxPackageUpdater) {
+            await linux_package_updater_service_1.linuxPackageUpdaterService.checkForUpdates();
+            return;
+        }
+        try {
+            // checkForUpdates() only checks — it does NOT download because autoDownload=false.
+            await electron_updater_1.autoUpdater.checkForUpdates();
+        }
+        catch (err) {
+            console.error('[AutoUpdateService] Failed to check for updates:', err.message);
+        }
+    }
+    /**
+     * Trigger the actual download of an available update.
+     * Only call this after the user has explicitly opted in.
+     */
+    async downloadUpdate() {
+        if (!this.supported || this.useLinuxPackageUpdater)
+            return;
+        // Immediately signal that download is starting so the UI transitions before
+        // the first download-progress event arrives (or before an error fires).
+        this.lastStatus = { status: 'downloading', percent: 0 };
+        messaging_service_1.messagingService.sendToAllRenderers('app-update-status', this.lastStatus);
+        try {
+            await electron_updater_1.autoUpdater.downloadUpdate();
+        }
+        catch (err) {
+            console.error('[AutoUpdateService] Failed to download update:', err.message);
+            this.lastStatus = { status: 'error', error: err.message };
+            messaging_service_1.messagingService.sendToAllRenderers('app-update-status', this.lastStatus);
+        }
+    }
+    /**
+     * Start a periodic update check every `intervalMs` milliseconds (default 4 hours).
+     * Call once from main.ts after the app is ready.
+     */
+    startPeriodicUpdateCheck(intervalMs = 4 * 60 * 60 * 1000) {
+        if (!this.supported)
+            return;
+        setInterval(() => {
+            this.checkForUpdates().catch(console.error);
+        }, intervalMs);
+    }
+    /**
+     * Quit the app and install the downloaded update.
+     * Only works after an update has been fully downloaded.
+     */
+    quitAndInstall() {
+        if (this.useLinuxPackageUpdater) {
+            linux_package_updater_service_1.linuxPackageUpdaterService.quitAndInstall();
+            return;
+        }
+        if (this.updateDownloaded) {
+            console.log('[AutoUpdateService] Quitting and installing update...');
+            electron_updater_1.autoUpdater.quitAndInstall();
+        }
+        else {
+            console.warn('[AutoUpdateService] No update downloaded yet.');
+        }
+    }
+    /**
+     * Returns the last broadcast status so late-connecting renderers can replay it.
+     */
+    getLastStatus() {
+        return this.lastStatus;
+    }
+    /**
+     * Returns whether an update has been downloaded and is ready to install.
+     */
+    isUpdateReady() {
+        if (this.useLinuxPackageUpdater) {
+            return linux_package_updater_service_1.linuxPackageUpdaterService.isUpdateReady();
+        }
+        return this.updateDownloaded;
+    }
+}
+exports.AutoUpdateService = AutoUpdateService;
+// Export singleton
+exports.autoUpdateService = new AutoUpdateService();

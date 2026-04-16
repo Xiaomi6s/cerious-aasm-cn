@@ -1,0 +1,243 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getArkServerDir = getArkServerDir;
+exports.isArkServerInstalled = isArkServerInstalled;
+exports.getCurrentInstalledVersion = getCurrentInstalledVersion;
+exports.installArkServer = installArkServer;
+exports.pollArkServerUpdates = pollArkServerUpdates;
+const path = __importStar(require("path"));
+const fs = __importStar(require("fs"));
+const child_process_1 = require("child_process");
+const installer_utils_1 = require("../../installer.utils");
+const steamcmd_utils_1 = require("../../steamcmd.utils");
+const ark_path_utils_1 = require("../ark-path.utils");
+// --- Constants ---
+const ARK_APP_ID = '2430930';
+const POLL_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+let lastKnownBuildId = null;
+// --- Utility Functions ---
+// Delegates to ArkPathUtils so the custom Server Data Directory setting is respected.
+// Using the hardcoded default here would cause the update checker to always report an
+// update when a custom install directory is in use (manifest not found → null ≠ latest).
+function getArkServerDir() {
+    return ark_path_utils_1.ArkPathUtils.getArkServerDir();
+}
+function isArkServerInstalled() {
+    const arkExecutable = path.join(getArkServerDir(), 'ShooterGame', 'Binaries', 'Win64', 'ArkAscendedServer.exe');
+    return fs.existsSync(arkExecutable);
+}
+// --- Version Logic ---
+async function getCurrentInstalledVersion() {
+    try {
+        const serverPath = getArkServerDir();
+        // Priority: AppManifest (Build ID) > version.txt (Display Version)
+        // We prioritize Build ID because that's what we compare against SteamCMD for updates.
+        const steamappsPath = path.join(serverPath, 'steamapps');
+        if (fs.existsSync(steamappsPath)) {
+            const manifestPath = path.join(steamappsPath, `appmanifest_${ARK_APP_ID}.acf`);
+            if (fs.existsSync(manifestPath)) {
+                const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+                const buildIdMatch = manifestContent.match(/"buildid"\s+"(\d+)"/);
+                if (buildIdMatch) {
+                    return buildIdMatch[1];
+                }
+            }
+        }
+        // Fallback to version.txt if manifest not found (legacy or corrupted install)
+        const versionFile = path.join(serverPath, 'version.txt');
+        if (fs.existsSync(versionFile)) {
+            const version = fs.readFileSync(versionFile, 'utf8').trim();
+            if (version)
+                return version;
+        }
+        return null;
+    }
+    catch (error) {
+        console.error('[ark-server] Error getting current version:', error);
+        return null;
+    }
+}
+// --- Install Logic ---
+function installArkServer(callback, onData) {
+    const steamcmdPath = (0, steamcmd_utils_1.getSteamCmdDir)();
+    const steamcmdExe = process.platform === 'win32' ? 'steamcmd.exe' : 'steamcmd.sh';
+    const steamcmdExecutable = path.join(steamcmdPath, steamcmdExe);
+    if (!fs.existsSync(steamcmdExecutable)) {
+        const error = new Error('SteamCMD not found. Please install SteamCMD first.');
+        callback(error);
+        return;
+    }
+    const installDir = getArkServerDir();
+    let arkProgressState = { maxBootstrap: 0, largeDownloadStarted: false };
+    const installerOptions = {
+        command: steamcmdExecutable,
+        args: [
+            '+force_install_dir', installDir,
+            '+login', 'anonymous',
+            '+app_update', ARK_APP_ID, 'validate',
+            '+quit'
+        ],
+        cwd: steamcmdPath,
+        estimatedTotal: 100,
+        phaseSplit: 80,
+        parseProgress: (data, lastPercent) => {
+            const steamcmdPatterns = [
+                /Update state.*?progress: (\d+\.\d+)/i,
+                /\[\s*(\d+)%\]\s+Downloading update/i,
+                /\[\s*(\d+)%\]\s+Download complete/i,
+                /progress: (\d+\.\d+)/i,
+                /(\d+)% complete/i,
+                /downloading.*?(\d+)%/i,
+            ];
+            for (const pattern of steamcmdPatterns) {
+                const match = pattern.exec(data);
+                if (match) {
+                    let percent = parseFloat(match[1]);
+                    if (percent > 100)
+                        percent = 100;
+                    if (data.includes('Update state (0x61) downloading')) {
+                        if (!arkProgressState.largeDownloadStarted) {
+                            arkProgressState.largeDownloadStarted = true;
+                            if (onData) {
+                                onData({
+                                    percent: 0,
+                                    step: 'downloading',
+                                    message: 'Starting Ark Server download...'
+                                });
+                            }
+                        }
+                        if (percent >= lastPercent) {
+                            if (onData) {
+                                onData({
+                                    percent: Math.floor(percent),
+                                    step: 'downloading',
+                                    message: `Downloading Ark Server (${percent.toFixed(1)}%)`
+                                });
+                            }
+                            return Math.floor(percent);
+                        }
+                        else {
+                            return null;
+                        }
+                    }
+                    else if (data.includes('Update state (0x81) verifying')) {
+                        if (onData) {
+                            onData({
+                                percent: 100,
+                                step: 'downloading',
+                                message: `Verifying Ark Server installation...`
+                            });
+                        }
+                        return 100;
+                    }
+                    else {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        },
+        validatePhase: () => ({
+            command: steamcmdExecutable,
+            args: [
+                '+force_install_dir', `"${installDir}"`,
+                '+login', 'anonymous',
+                '+app_update', ARK_APP_ID, 'validate',
+                '+quit'
+            ],
+            cwd: steamcmdPath,
+        })
+    };
+    (0, installer_utils_1.runInstaller)(installerOptions, (progress) => {
+        if (onData) {
+            onData(progress);
+        }
+    }, (err, output) => {
+        callback(err, output);
+    });
+}
+// --- Polling Logic ---
+async function pollArkServerUpdates() {
+    try {
+        const buildId = await getLatestServerVersion();
+        if (buildId && buildId !== lastKnownBuildId) {
+            const prev = lastKnownBuildId;
+            lastKnownBuildId = buildId;
+            return prev !== null ? buildId : null;
+        }
+        return null;
+    }
+    catch (err) {
+        console.error('[ark-server] Error during ARK update poll:', err);
+        return null;
+    }
+}
+async function getLatestServerVersion() {
+    if (!(0, steamcmd_utils_1.isSteamCmdInstalled)()) {
+        console.error('[ark-server] SteamCMD not installed');
+        return null;
+    }
+    const steamcmdPath = (0, steamcmd_utils_1.getSteamCmdDir)();
+    const steamcmdExe = process.platform === 'win32' ? 'steamcmd.exe' : 'steamcmd.sh';
+    const steamcmdExecutable = path.join(steamcmdPath, steamcmdExe);
+    return new Promise((resolve) => {
+        let latestBuildId = null;
+        let output = '';
+        const proc = (0, child_process_1.spawn)(steamcmdExecutable, [
+            '+login', 'anonymous',
+            '+app_info_update', '1',
+            '+app_info_print', ARK_APP_ID.toString(),
+            '+quit'
+        ], { cwd: steamcmdPath });
+        proc.stdout.on('data', (data) => {
+            const str = data.toString();
+            output += str;
+            const buildIdMatch = str.match(/buildid.*?(\d+)/i);
+            if (buildIdMatch) {
+                latestBuildId = buildIdMatch[1];
+            }
+        });
+        proc.stderr.on('data', (data) => {
+            output += data.toString();
+        });
+        proc.on('close', () => {
+            if (!latestBuildId) {
+                console.error('[ark-server] Could not find buildid in SteamCMD output:', output);
+            }
+            resolve(latestBuildId);
+        });
+    });
+}
