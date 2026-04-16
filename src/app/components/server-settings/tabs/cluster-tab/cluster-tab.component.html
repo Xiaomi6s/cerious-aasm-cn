@@ -1,0 +1,178 @@
+<!-- Cluster Tab Content -->
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>服务器集群配置</h4>
+    <p class="form-control-label desc">配置此服务器作为 ARK 集群的一部分，以进行跨服务器的角色和物品转移。</p>
+  </div>
+
+  <div class="settings-section">
+    <h5>集群设置</h5>
+    <p class="section-desc">配置集群目录、ID 和基本集群属性。</p>
+
+    <!-- Cluster Directory -->
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <label class="form-control-label">集群目录路径</label>
+    <input
+      type="text"
+      class="form-control input"
+      [(ngModel)]="serverInstance.clusterDirOverride"
+      (blur)="onValidateField('clusterDirOverride', serverInstance.clusterDirOverride); onSaveSettings()"
+      placeholder="例如：/mnt/cluster-data 或 C:\Shared\Cluster"
+      [disabled]="isLocked">
+    <div class="form-control-label desc">
+      共享集群目录的绝对路径（推荐用于多机器集群）。对于单机设置，可以是相对于安装目录的路径。集群中所有服务器必须使用相同的目录路径。此目录存储角色和物品转移数据。
+    </div>
+    <div *ngIf="hasFieldError('clusterDirOverride')" class="validation-error">{{ getFieldError('clusterDirOverride') }}</div>
+    <div *ngIf="hasFieldWarning('clusterDirOverride')" class="validation-warning">{{ getFieldWarning('clusterDirOverride') }}</div>
+  </div>
+
+  <!-- Cluster ID -->
+  <div class="form-group">
+    <label class="form-control-label">集群 ID</label>
+    <input
+      type="text"
+      class="form-control input"
+      [(ngModel)]="serverInstance.clusterId"
+      (blur)="onValidateField('clusterId', serverInstance.clusterId); onSaveSettings()"
+      placeholder="例如：MyCluster01"
+      [disabled]="isLocked">
+    <div class="form-control-label desc">
+      此集群的唯一标识符。同一集群中的所有服务器应使用相同的 ID。
+    </div>
+    <div *ngIf="hasFieldError('clusterId')" class="validation-error">{{ getFieldError('clusterId') }}</div>
+    <div *ngIf="hasFieldWarning('clusterId')" class="validation-warning">{{ getFieldWarning('clusterId') }}</div>
+  </div>
+
+  <!-- Cluster Name -->
+  <div class="form-group">
+    <label class="form-control-label">集群名称（显示）</label>
+    <input
+      type="text"
+      class="form-control input"
+      [(ngModel)]="serverInstance.clusterName"
+      (blur)="onValidateField('clusterName', serverInstance.clusterName); onSaveSettings()"
+      placeholder="例如：我的 PvP 集群"
+      [disabled]="isLocked">
+    <div class="form-control-label desc">
+      集群的可读名称（仅用于界面显示）。
+    </div>
+    <div *ngIf="hasFieldError('clusterName')" class="validation-error">{{ getFieldError('clusterName') }}</div>
+    <div *ngIf="hasFieldWarning('clusterName')" class="validation-warning">{{ getFieldWarning('clusterName') }}</div>
+  </div>
+
+  <!-- Test Connection Button -->
+  <div class="form-group" style="grid-column: 1 / -1;" *ngIf="serverInstance.clusterDirOverride">
+    <div>
+      <button
+        type="button"
+        class="btn btn-ghost"
+        (click)="testClusterConnectivity()"
+        [disabled]="!serverInstance.clusterDirOverride || isLocked">
+        <i class="material-icons">wifi_tethering</i> 测试集群目录连接
+      </button>
+      <div class="form-control-label desc">
+        测试集群目录是否可访问，以及是否可用于跨服务器转移。
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Transfer Restrictions -->
+<div class="settings-section">
+  <h5>转移限制</h5>
+  <p class="section-desc">配置在集群服务器之间可以转移的内容。</p>
+
+  <!-- No Transfer Filtering -->
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.noTransferFromFiltering" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">允许所有转移</span>
+    </label>
+    <div class="form-control-label desc">
+      启用后，允许来自集群中任意服务器的转移，不进行过滤。
+    </div>
+  </div>
+
+  <!-- Download Restrictions -->
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventDownloadSurvivors" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止角色下载</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从集群下载角色到此服务器。
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventDownloadItems" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止物品下载</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从集群下载物品到此服务器。
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventDownloadDinos" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止恐龙下载</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从集群下载驯服生物到此服务器。
+    </div>
+  </div>
+
+  <!-- Upload Restrictions -->
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventUploadSurvivors" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止角色上传</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从此服务器上传角色到集群。
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventUploadItems" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止物品上传</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从此服务器上传物品到集群。
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.preventUploadDinos" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">阻止恐龙上传</span>
+    </label>
+    <div class="form-control-label desc">
+      阻止玩家从此服务器上传驯服生物到集群。
+    </div>
+  </div>
+
+  <!-- Additional Transfer Settings -->
+  <div class="form-group">
+    <label class="form-control-label toggle-label">
+      <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.crossArkAllowForeignDinoDownloads" (change)="onSaveSettings()" [disabled]="isLocked" />
+      <span class="slider"></span>
+      <span class="toggle-text">允许外来恐龙下载</span>
+    </label>
+    <div class="form-control-label desc">
+      允许从集群中其他 ARK 游戏/地图下载生物。跨服务器生物转移的必要设置。
+    </div>
+  </div>
+</div>

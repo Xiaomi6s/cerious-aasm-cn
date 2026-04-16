@@ -1,0 +1,97 @@
+<!-- 广播 Tab Content -->
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>自动广播管理</h4>
+    <p class="form-control-label desc">按计划通过 RCON 自动向服务器广播消息。配置自定义消息和间隔。</p>
+  </div>
+
+  <div class="settings-section">
+    <h5>广播配置</h5>
+    <p class="section-desc">启用自动消息广播并配置全局设置。</p>
+
+    <div class="form-group">
+      <label class="form-control-label toggle-label">
+        <input type="checkbox" 
+               class="toggle-switch" 
+               [(ngModel)]="enabled" 
+               (change)="onSaveSettings()" 
+               [disabled]="isLocked" 
+               tabindex="0" />
+        <span class="slider"></span>
+        <span class="toggle-text">启用自动广播</span>
+      </label>
+      <div class="form-control-label desc">启用后，消息将根据其各自的计划进行广播。</div>
+    </div>
+  </div>
+
+  <div class="settings-section" *ngIf="enabled">
+    <h5>消息管理</h5>
+    <p class="section-desc">添加和配置具有自定义间隔的自动广播消息。</p>
+
+    <!-- Add Message Section -->
+    <div class="form-group" style="grid-column: 1 / -1;">
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn btn-ghost" (click)="addMessage()" [disabled]="isLocked" style="white-space: nowrap;">
+          <i class="material-icons">add</i> Add Message
+        </button>
+      </div>
+    </div>
+
+    <!-- Message List Section -->
+    <div class="form-group broadcast-table-container" style="grid-column: 1 / -1;">
+      <label class="form-control-label">Broadcast Messages ({{ messages.length }})</label>
+      <div class="broadcast-list">
+        <table class="broadcast-table">
+        <thead>
+          <tr>
+            <th>已启用</th>
+            <th>消息内容</th>
+            <th>间隔 (分钟)</th>
+            <th style="text-align: right;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="messages.length === 0" class="no-data-row">
+            <td colspan="4" class="no-data">未配置任何广播消息</td>
+          </tr>
+          <tr *ngFor="let msg of messages; let i = index" class="table-row">
+            <td class="broadcast-status">
+              <div class="form-control-label toggle-label">
+                <input type="checkbox" class="toggle-switch" [(ngModel)]="msg.enabled" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+                <span class="toggle-text">{{ msg.enabled ? 'On' : 'Off' }}</span>
+              </div>
+            </td>
+            <td class="broadcast-message">
+              <textarea 
+                class="form-control input broadcast-textarea" 
+                [(ngModel)]="msg.message" 
+                (blur)="onSaveSettings()"
+                [disabled]="isLocked"
+                rows="2"
+                placeholder="输入广播消息..."
+              ></textarea>
+            </td>
+            <td class="broadcast-interval">
+              <input 
+                type="number" 
+                class="form-control input" 
+                [(ngModel)]="msg.interval"
+                (blur)="onSaveSettings()" 
+                [disabled]="isLocked" 
+                min="1"
+                style="text-align: center; width: 80px;"
+              />
+            </td>
+            <td class="broadcast-actions">
+              <button class="btn btn-sm btn-ghost" (click)="removeMessage(i)" [disabled]="isLocked" title="移除消息">
+                <i class="material-icons">delete_outline</i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="form-control-label desc">消息将以其指定的间隔广播。设置较长的间隔以减少服务器聊天垃圾信息。</div>
+  </div>
+
+</div>

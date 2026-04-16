@@ -1,0 +1,60 @@
+<!-- Login page - full screen without sidebar -->
+<div *ngIf="isLoginPage" class="login-page-container">
+  <router-outlet></router-outlet>
+</div>
+
+<!-- Main app layout - with sidebar -->
+<ng-container *ngIf="!isLoginPage && (isElectron || (!connecting && !connectionLost)); else lostOrConnecting">
+  <div class="app-root-wrapper">
+    <!-- App Update Banner - full width above everything -->
+    <app-update-banner *ngIf="isElectron"></app-update-banner>
+
+    <div class="app-container">
+      <!-- Mobile Header -->
+      <div *ngIf="isMobile" class="mobile-header">
+        <button class="mobile-menu-btn" (click)="toggleMobileMenu()" [attr.aria-label]="isMobileMenuOpen ? 'Close menu' : 'Open menu'">
+          <span class="material-icons">{{ isMobileMenuOpen ? 'close' : 'menu' }}</span>
+        </button>
+        <div class="mobile-header-title">Cerious AASM</div>
+      </div>
+
+      <!-- Mobile Overlay -->
+      <div *ngIf="isMobile && isMobileMenuOpen" class="mobile-overlay" (click)="closeMobileMenu()"></div>
+
+      <!-- Sidebar Container -->
+      <div class="sidebar-container" [class.mobile-open]="isMobile && isMobileMenuOpen">
+        <app-sidebar (selectServer)="onServerSelected($event)" (closeMobileMenu)="closeMobileMenu()"></app-sidebar>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content" [class.mobile-menu-open]="isMobile && isMobileMenuOpen">
+        <router-outlet></router-outlet>
+
+        <!-- Exit Confirmation Modal -->
+        <app-modal [show]="showExitModal" [title]="'Servers Running'" (close)="onExitModalClose('cancel')">
+          <div>
+            <p>有正在运行的服务器。您想怎么做？</p>
+            <ul *ngIf="runningServers && runningServers.length > 0">
+              <li *ngFor="let server of runningServers">{{ server.name }}</li>
+            </ul>
+            <div class="action-group-modal">
+              <button class="btn" (click)="onExitModalClose('cancel')">取消</button>
+              <button class="btn" (click)="onExitModalClose('exit')">强制退出</button>
+              <button class="btn" (click)="onExitModalClose('shutdown')">关闭服务器并退出</button>
+            </div>
+          </div>
+        </app-modal>
+      </div>
+    </div>
+  </div>
+</ng-container>
+<ng-template #lostOrConnecting>
+  <div *ngIf="connecting" class="connection-lost-container">
+    <div class="connection-lost-content">
+      <div class="icon-glitch"><span>🛰️</span></div>
+      <h1>正在连接...</h1>
+      <p>正在尝试连接到 Web 服务器。</p>
+    </div>
+  </div>
+  <app-connection-lost *ngIf="!connecting && connectionLost"></app-connection-lost>
+</ng-template>

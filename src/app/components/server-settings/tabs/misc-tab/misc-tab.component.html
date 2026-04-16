@@ -1,0 +1,144 @@
+<!-- Misc Tab Content -->
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>杂项设置</h4>
+    <p class="form-control-label desc">其他服务器配置选项，包括游戏模式、PvP 规则、HUD、生物、印迹和管理设置。</p>
+  </div>
+
+  <!-- Game Mode & Rules -->
+  <div class="settings-section">
+    <h5>游戏模式与规则</h5>
+    <p class="section-desc">定义整体服务器体验的核心游戏模式设置。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('gamemode')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- PvP & Combat -->
+  <div class="settings-section">
+    <h5>PvP 与战斗</h5>
+    <p class="section-desc">配置 PvP 规则、战斗机制、友军伤害和离线保护。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('pvp')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- HUD & Visual -->
+  <div class="settings-section">
+    <h5>HUD 与视觉</h5>
+    <p class="section-desc">配置平视显示器、相机、天气效果和视觉反馈选项。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('hud')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Chat & Communication -->
+  <div class="settings-section">
+    <h5>聊天与通信</h5>
+    <p class="section-desc">配置语音聊天和通信选项。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('chat')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <div class="form-control-label desc">{{ field.description }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Creatures & Taming -->
+  <div class="settings-section">
+    <h5>生物与驯服</h5>
+    <p class="section-desc">配置驯服限制、飞行物规则、留痕和生物行为。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('creatures')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Engrams & Crafting -->
+  <div class="settings-section">
+    <h5>印迹与制作</h5>
+    <p class="section-desc">配置印迹解锁、制作配方和物品堆叠大小。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('engrams')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Administration -->
+  <div class="settings-section">
+    <h5>管理</h5>
+    <p class="section-desc">配置服务器管理、日志记录、自动保存和玩家管理。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('admin')">
+      <div class="form-group">
+        <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+          <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+          <span class="toggle-text">{{ field.label }}</span>
+        </div>
+        <label *ngIf="field.type !== 'boolean'" class="form-control-label"><span>{{ field.label }}</span></label>
+        <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step" [min]="field.min" [max]="field.max" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+        <div class="form-control-label desc">{{ field.description }}</div>
+        <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+        <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+      </div>
+    </ng-container>
+  </div>
+</div>

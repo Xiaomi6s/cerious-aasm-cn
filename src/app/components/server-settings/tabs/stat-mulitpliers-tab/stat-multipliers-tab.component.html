@@ -1,0 +1,149 @@
+<!-- Stats Tab Content -->
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>每级属性倍率</h4>
+    <p class="form-control-label desc">配置玩家和恐龙每级属性增加的幅度。较高的值会使角色和生物在每级变得更强大。</p>
+  </div>
+
+  <div class="form-group stat-multiplier-container" style="grid-column: 1 / -1;">
+    <div class="stat-selection-header">
+      <h5>选择要配置的属性</h5>
+      <div class="stat-selector">
+        <div class="custom-dropdown">
+          <button type="button" class="form-control input" style="width: 200px;" (click)="onToggleStatSelectorDropdown()">
+            <span>{{ getStatSelectorDisplayName(selectedStatIndex) }}</span>
+            <span class="material-icons">arrow_drop_down</span>
+          </button>
+          <div *ngIf="statSelectorDropdownOpen" class="dropdown-menu show">
+            <div *ngFor="let stat of statList; let i = index" (mousedown)="onStatSelectorSelect(i)" [ngClass]="{'selected': selectedStatIndex === i}">{{ stat }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multiplier Configuration -->
+    <div *ngIf="selectedStatIndex !== null" class="stat-multiplier-content">
+      <div class="current-stat-header">
+        <h4>{{ statList[selectedStatIndex] }} 倍率</h4>
+        <p class="form-control-label desc">配置 {{ statList[selectedStatIndex] }} 对玩家和恐龙的缩放。</p>
+      </div>
+
+      <!-- Player Multipliers Section -->
+      <div class="multiplier-section">
+        <h5>Player 倍率</h5>
+        <p class="section-desc">控制此属性对玩家每级增加的幅度。</p>
+
+        <div class="form-group">
+          <label class="form-control-label">玩家等级倍率</label>
+          <input class="form-control input"
+                 type="number"
+                 step="0.01"
+                 min="0"
+                 [ngModel]="getStatMultiplier('Player', selectedStatIndex)"
+                 (ngModelChange)="onStatMultiplierChange('Player', selectedStatIndex, $event)"
+                 [disabled]="isLocked" />
+          <div class="form-control-label desc">Multiplier for {{ statList[selectedStatIndex] }} gained per player level (default: 1.0)</div>
+        </div>
+      </div>
+
+      <!-- Wild Dino Multipliers Section -->
+      <div class="multiplier-section">
+        <h5>Wild Dinosaur 倍率</h5>
+        <p class="section-desc">控制世界中野生恐龙的属性缩放。</p>
+
+        <div class="form-group">
+          <label class="form-control-label">野生恐龙倍率</label>
+          <input class="form-control input"
+                 type="number"
+                 step="0.01"
+                 min="0"
+                 [ngModel]="getStatMultiplier('DinoWild', selectedStatIndex)"
+                 (ngModelChange)="onStatMultiplierChange('DinoWild', selectedStatIndex, $event)"
+                 [disabled]="isLocked" />
+          <div class="form-control-label desc">Base multiplier for wild dinosaur {{ statList[selectedStatIndex] }} per level (default: 1.0)</div>
+        </div>
+      </div>
+
+      <!-- Tamed Dino Multipliers Section -->
+      <div class="multiplier-section">
+        <h5>Tamed Dinosaur 倍率</h5>
+        <p class="section-desc">控制驯服恐龙如何通过升级和驯服奖励获得属性。</p>
+
+        <div class="multiplier-grid">
+          <div class="form-group">
+            <label class="form-control-label">驯服等级倍率</label>
+            <input class="form-control input"
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [ngModel]="getStatMultiplier('DinoTamed', selectedStatIndex)"
+                   (ngModelChange)="onStatMultiplierChange('DinoTamed', selectedStatIndex, $event)"
+                   [disabled]="isLocked" />
+            <div class="form-control-label desc">Base {{ statList[selectedStatIndex] }} per level for tamed dinos</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-control-label">驯服附加奖励</label>
+            <input class="form-control input"
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [ngModel]="getStatMultiplier('DinoTamed_Add', selectedStatIndex)"
+                   (ngModelChange)="onStatMultiplierChange('DinoTamed_Add', selectedStatIndex, $event)"
+                   [disabled]="isLocked" />
+            <div class="form-control-label desc">每级附加平值奖励</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-control-label">驯服亲和奖励</label>
+            <input class="form-control input"
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [ngModel]="getStatMultiplier('DinoTamed_Affinity', selectedStatIndex)"
+                   (ngModelChange)="onStatMultiplierChange('DinoTamed_Affinity', selectedStatIndex, $event)"
+                   [disabled]="isLocked" />
+            <div class="form-control-label desc">基于驯服效率的奖励</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-control-label">眩晕倍率</label>
+            <input class="form-control input"
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [ngModel]="getStatMultiplier('DinoTamed_Torpidity', selectedStatIndex)"
+                   (ngModelChange)="onStatMultiplierChange('DinoTamed_Torpidity', selectedStatIndex, $event)"
+                   [disabled]="isLocked" />
+            <div class="form-control-label desc">驯服生物的眩晕缩放</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-control-label">等级上限倍率</label>
+            <input class="form-control input"
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [ngModel]="getStatMultiplier('DinoTamed_Clamp', selectedStatIndex)"
+                   (ngModelChange)="onStatMultiplierChange('DinoTamed_Clamp', selectedStatIndex, $event)"
+                   [disabled]="isLocked" />
+            <div class="form-control-label desc">最大等级上限缩放因子</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="multiplier-section">
+        <h5>快速操作</h5>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-ghost" (click)="onResetStatToDefaults(selectedStatIndex)" [disabled]="isLocked">
+            <i class="material-icons">refresh</i> 重置为默认
+          </button>
+          <button class="btn btn-ghost" (click)="onCopyStatToAll(selectedStatIndex)" [disabled]="isLocked">
+            <i class="material-icons">content_copy</i> Copy to All Stats
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

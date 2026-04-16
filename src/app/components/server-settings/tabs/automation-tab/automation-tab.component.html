@@ -1,0 +1,124 @@
+    <div class="tab-content">
+      <div class="automation-status-row">
+        <div class="status-item-inline">
+          <span class="status-label">自动启动：</span>
+          <span class="automation-badge" [class.enabled]="serverInstance.autoStartOnAppLaunch">
+            {{ getAutoStartStatus() }}
+          </span>
+        </div>
+        <div class="status-item-inline">
+          <span class="status-label">崩溃检测：</span>
+          <span class="automation-badge" [class.enabled]="serverInstance.crashDetectionEnabled">
+            {{ serverInstance.crashDetectionEnabled ? 'Enabled' : 'Disabled' }}
+          </span>
+        </div>
+        <div class="status-item-inline">
+          <span class="status-label">计划重启：</span>
+          <span class="automation-badge" [class.enabled]="serverInstance.scheduledRestartEnabled">
+            {{ getScheduledRestartStatus() }}
+          </span>
+        </div>
+      </div>
+
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>服务器自动化设置</h4>
+        <p class="form-control-label desc">配置服务器的自动启动、崩溃检测和计划重启选项。</p>
+      </div>
+
+      <!-- Auto-start Settings -->
+      <div class="settings-section">
+          <h5>自动启动配置</h5>
+          <p class="section-desc">配置在应用启动时自动启动服务器。</p>
+
+          <div class="form-group">
+          <div class="form-control-label toggle-label">
+            <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.autoStartOnAppLaunch" (change)="onSaveAutoStartSettings()" [disabled]="isAutomationLocked" tabindex="0" />
+            <span class="toggle-text">在应用启动时自动启动</span>
+          </div>
+          <div class="form-control-label desc">在应用启动时自动启动此服务器。</div>
+        </div>
+        </div>
+
+        <!-- Crash Detection Settings -->
+        <div class="settings-section">
+          <h5>崩溃检测与恢复</h5>
+          <p class="section-desc">监控服务器进程，如果发生崩溃则自动重启。</p>
+
+          <div class="form-group">
+          <div class="form-control-label toggle-label">
+            <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.crashDetectionEnabled" (change)="onSaveCrashDetectionSettings()" [disabled]="isAutomationLocked" tabindex="0" />
+            <span class="toggle-text">启用崩溃检测</span>
+          </div>
+          <div class="form-control-label desc">监控服务器进程，如果崩溃或无响应则自动重启。</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-control-label">崩溃检测间隔（秒）</label>
+          <input class="form-control input" type="number" min="30" max="300" [(ngModel)]="serverInstance.crashDetectionInterval" (blur)="onSaveCrashDetectionSettings(); onValidateField('crashDetectionInterval', serverInstance.crashDetectionInterval)" [disabled]="isAutomationLocked || !serverInstance.crashDetectionEnabled" />
+          <div class="form-control-label desc">检查服务器进程是否运行的频率（30-300秒）。</div>
+          <div *ngIf="hasFieldError('crashDetectionInterval')" class="validation-error">{{ getFieldError('crashDetectionInterval') }}</div>
+          <div *ngIf="hasFieldWarning('crashDetectionInterval')" class="validation-warning">{{ getFieldWarning('crashDetectionInterval') }}</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-control-label">最大重启尝试次数</label>
+          <input class="form-control input" type="number" min="1" max="10" [(ngModel)]="serverInstance.maxRestartAttempts" (blur)="onSaveCrashDetectionSettings(); onValidateField('maxRestartAttempts', serverInstance.maxRestartAttempts)" [disabled]="isAutomationLocked || !serverInstance.crashDetectionEnabled" />
+          <div class="form-control-label desc">放弃前的最大重启尝试次数（1-10）。</div>
+          <div *ngIf="hasFieldError('maxRestartAttempts')" class="validation-error">{{ getFieldError('maxRestartAttempts') }}</div>
+          <div *ngIf="hasFieldWarning('maxRestartAttempts')" class="validation-warning">{{ getFieldWarning('maxRestartAttempts') }}</div>
+        </div>
+        </div>
+
+        <!-- Scheduled Restart Settings -->
+        <div class="settings-section">
+          <h5>计划重启</h5>
+          <p class="section-desc">配置按计划间隔自动重启服务器。</p>
+
+          <div class="form-group">
+          <div class="form-control-label toggle-label">
+            <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance.scheduledRestartEnabled" (change)="onSaveScheduledRestartSettings()" [disabled]="isAutomationLocked" tabindex="0" />
+            <span class="toggle-text">启用计划重启</span>
+          </div>
+          <div class="form-control-label desc">在计划的时间自动重启服务器以保持性能。</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-control-label">重启频率</label>
+          <div class="custom-dropdown" [class.disabled]="isAutomationLocked || !serverInstance.scheduledRestartEnabled">
+            <button type="button" class="form-control input" [disabled]="isAutomationLocked || !serverInstance.scheduledRestartEnabled" (click)="onToggleRestartFrequencyDropdown()">
+              <span>{{ getRestartFrequencyDisplayName(serverInstance.restartFrequency) || 'Select frequency...' }}</span>
+              <span class="material-icons">arrow_drop_down</span>
+            </button>
+            <div *ngIf="restartFrequencyDropdownOpen && !isAutomationLocked && serverInstance.scheduledRestartEnabled" class="dropdown-menu show">
+              <div *ngFor="let opt of getRestartFrequencyOptions()" (mousedown)="onRestartFrequencySelect(opt.value)" [ngClass]="{'selected': serverInstance.restartFrequency === opt.value}">{{ opt.display }}</div>
+            </div>
+          </div>
+          <div class="form-control-label desc">自动重启服务器的频率。</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-control-label">重启时间</label>
+          <input type="time" class="form-control input" [(ngModel)]="serverInstance.restartTime" (blur)="onSaveScheduledRestartSettings()" [disabled]="isAutomationLocked || !serverInstance.scheduledRestartEnabled" />
+          <div class="form-control-label desc">重启服务器的一天中的时间（24小时制）。</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-control-label">警告期（分钟）</label>
+          <input class="form-control input" type="number" min="1" max="60" [(ngModel)]="serverInstance.restartWarningMinutes" (blur)="onSaveScheduledRestartSettings(); onValidateField('restartWarningMinutes', serverInstance.restartWarningMinutes)" [disabled]="isAutomationLocked || !serverInstance.scheduledRestartEnabled" />
+          <div class="form-control-label desc">重启前多少分钟警告玩家（1-60分钟）。</div>
+          <div *ngIf="hasFieldError('restartWarningMinutes')" class="validation-error">{{ getFieldError('restartWarningMinutes') }}</div>
+          <div *ngIf="hasFieldWarning('restartWarningMinutes')" class="validation-warning">{{ getFieldWarning('restartWarningMinutes') }}</div>
+        </div>
+
+        <div class="form-group" *ngIf="serverInstance.restartFrequency === 'weekly' || serverInstance.restartFrequency === 'custom'">
+          <label class="form-control-label">重启日期</label>
+          <div class="checkbox-group">
+            <div class="form-control-label toggle-label" *ngFor="let day of weekDays; let i = index">
+              <input type="checkbox" class="toggle-switch" [checked]="isRestartDaySelected(i)" (change)="onRestartDayToggle(i, $event)" [disabled]="isAutomationLocked || !serverInstance.scheduledRestartEnabled" />
+              <span class="toggle-text">{{ day }}</span>
+            </div>
+          </div>
+          <div class="form-control-label desc">选择在一周中的哪几天重启服务器。</div>
+        </div>
+        </div>
+      </div>

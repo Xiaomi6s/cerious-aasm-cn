@@ -1,0 +1,55 @@
+<div class="card">
+  <div class="card-header button-header collapsible-header" (click)="toggleVisibility()">
+    <h2>服务器状态</h2>
+    <div class="button-header-actions">
+      <button class="btn" (click)="onStartServer($event)"
+        [disabled]="!canStart" title="启动服务器">
+        <i class="material-icons">play_arrow</i>
+      </button>
+      <button class="btn" (click)="onStopServer($event)" [disabled]="!canStop" title="停止服务器">
+        <i class="material-icons">stop</i>
+      </button>
+      <button class="btn" (click)="onSaveWorld($event)" [disabled]="!canStop" title="立即存档">
+        <i class="material-icons">save</i>
+      </button>
+      <button class="btn" (click)="onSaveAndBackup($event)" [disabled]="!canStop" title="存档并备份">
+        <i class="material-icons">backup</i>
+      </button>
+      <button class="btn" (click)="onForceStopServer($event)" [disabled]="!canForceStop" title="强制停止">
+        <i class="material-icons">power_off</i>
+      </button>
+      <span class="material-icons">
+        {{ isVisible ? 'expand_more' : 'expand_less' }}
+      </span>
+    </div>
+  </div>
+  <div class="card-body" *ngIf="isVisible">
+    <div class="server-state-header-row">
+      <span>状态：</span>
+      <span class="status-badge" [ngClass]="statusClasses">
+        {{ statusText }}
+      </span>
+      <span class="players-indicator" *ngIf="serverInstance.state && serverInstance.state === '运行中' && maxPlayers !== null">
+        玩家: {{ currentPlayers }} / {{ maxPlayers }}
+      </span>
+      <span class="memory-indicator" *ngIf="serverInstance.state && serverInstance.state === '运行中' && memoryUsage">
+        内存: {{ memoryUsage }} MB
+      </span>
+    </div>
+    <div *ngIf="serverMessage" style="margin: 0.5rem 0; color: #94a3b8; font-size: 0.875rem;">
+      {{ serverMessage }}
+    </div>
+    <div class="console-log-container" style="margin-top: 0.75rem;" #logContainer>
+      <ng-container *ngIf="logs && logs.length; else noLogs">
+        <div class="console-log-line" *ngFor="let line of logs">
+          {{ line }}
+        </div>
+      </ng-container>
+      <ng-template #noLogs>
+        <div class="console-log-placeholder">
+          暂无输出，启动服务器后可在此查看日志...
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

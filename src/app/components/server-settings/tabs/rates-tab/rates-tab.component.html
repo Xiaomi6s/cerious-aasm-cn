@@ -1,0 +1,144 @@
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>经验与资源倍率</h4>
+    <p class="form-control-label desc">配置经验获取、资源收集、驯服速度和其他进度倍率以自定义游戏体验。</p>
+  </div>
+
+  <!-- Experience & Progression -->
+  <div class="settings-section">
+    <h5>经验与进度</h5>
+    <p class="section-desc">配置经验获取倍率和进度倍率。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('experience')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+
+  <!-- Taming & Breeding -->
+  <div class="settings-section">
+    <h5>驯服与繁殖</h5>
+    <p class="section-desc">配置驯服速度和繁殖倍率。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('taming')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+
+  <!-- Resource Harvesting -->
+  <div class="settings-section">
+    <h5>资源收集</h5>
+    <p class="section-desc">配置资源收集倍率和收获数量。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('harvesting')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+
+  <!-- Player & Dino Stats -->
+  <div class="settings-section">
+    <h5>玩家与恐龙属性</h5>
+    <p class="section-desc">配置玩家和恐龙的属性倍率。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('stats')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+
+  <!-- World & Environment -->
+  <div class="settings-section">
+    <h5>世界与环境</h5>
+    <p class="section-desc">配置世界设置、昼夜循环、腐败和环境因素。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('world')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+
+  <!-- Loot Quality -->
+  <div class="settings-section">
+    <h5>战利品质量</h5>
+    <p class="section-desc">配置补给箱和钓鱼的战利品质量。</p>
+
+    <ng-container *ngFor="let field of getFieldsByCategory('loot')">
+    <div class="form-group">
+      <div *ngIf="field.type === 'boolean'" class="form-control-label toggle-label">
+        <input type="checkbox" class="toggle-switch" [(ngModel)]="serverInstance[field.key]" (change)="onSaveSettings()" [disabled]="isLocked" tabindex="0" />
+        <span class="toggle-text">{{ field.label }}</span>
+      </div>
+      <label *ngIf="field.type !== 'boolean'" class="form-control-label">
+        <span>{{ field.label }}</span>
+      </label>
+      <input *ngIf="field.type === 'number'" class="form-control input" type="number" [step]="field.step || 1" [min]="field.min || null" [max]="field.max || null" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <input *ngIf="field.type === 'text'" class="form-control input" type="text" [(ngModel)]="serverInstance[field.key]" (blur)="onSaveSettings(); onValidateField(field.key, serverInstance[field.key])" [disabled]="isLocked" />
+      <div class="form-control-label desc">{{ field.description }}</div>
+      <div *ngIf="hasFieldError(field.key)" class="validation-error">{{ getFieldError(field.key) }}</div>
+      <div *ngIf="hasFieldWarning(field.key)" class="validation-warning">{{ getFieldWarning(field.key) }}</div>
+    </div>
+  </ng-container>
+  </div>
+</div>

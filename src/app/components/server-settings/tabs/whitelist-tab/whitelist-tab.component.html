@@ -1,0 +1,207 @@
+<!-- Whitelist Tab Content -->
+<div class="tab-content">
+  <div class="form-group" style="grid-column: 1 / -1;">
+    <h4>服务器白名单管理</h4>
+    <p class="form-control-label desc">管理服务器的独占加入列表。启用白名单模式时，只有白名单上的玩家可以加入。</p>
+  </div>
+
+  <!-- Enable Whitelist Setting -->
+  <div class="settings-section">
+    <h5>白名单配置</h5>
+    <p class="section-desc">配置服务器的独占加入模式。</p>
+
+    <div class="form-group">
+      <label class="form-control-label toggle-label">
+        <input type="checkbox" 
+               class="toggle-switch" 
+               [checked]="serverInstance?.useExclusiveList" 
+               (change)="onUseExclusiveListChange($event.target.checked)" 
+               [disabled]="isLocked" 
+               tabindex="0" />
+        <span class="slider"></span>
+        <span class="toggle-text">启用白名单（独占加入）</span>
+      </label>
+      <div class="form-control-label desc">启用后，只有白名单上的玩家才能加入服务器。需要重启服务器才能生效。</div>
+    </div>
+
+    <!-- Whitelist Status -->
+    <div class="form-group" style="grid-column: 1 / -1;">
+      <div class="whitelist-status" [ngClass]="{ 'enabled': serverInstance?.useExclusiveList, 'disabled': !serverInstance?.useExclusiveList }">
+        <span class="status-indicator"></span>
+        {{ serverInstance?.useExclusiveList ? 'Whitelist Active' : 'Whitelist Disabled' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Management Section -->
+  <div class="settings-section" *ngIf="serverInstance?.useExclusiveList">
+    <h5>玩家管理</h5>
+    <p class="section-desc">添加单个玩家或管理现有的白名单条目。</p>
+
+    <!-- Add Player Actions -->
+    <div class="form-group" style="grid-column: 1 / -1;">
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn btn-ghost" 
+                (click)="openAddPlayerModal()" 
+                [disabled]="isLocked">
+          <i class="material-icons">person_add</i> Add Player
+        </button>
+        <button class="btn btn-ghost" 
+                (click)="openBulkAddModal()" 
+                [disabled]="isLocked">
+          <i class="material-icons">group_add</i> Bulk Add
+        </button>
+        <button class="btn btn-ghost btn-danger" 
+                (click)="clearWhitelist()" 
+                [disabled]="isLocked || whitelistedPlayers.length === 0">
+          <i class="material-icons">clear_all</i> Clear All
+        </button>
+      </div>
+    </div>
+
+    <!-- Whitelist Table -->
+    <div class="form-group whitelist-table-container" style="grid-column: 1 / -1;">
+      <label class="form-control-label">Whitelisted 玩家 ({{ whitelistedPlayers.length }})</label>
+      <div class="whitelist-list">
+        <table class="whitelist-table">
+          <thead>
+            <tr>
+              <th>玩家 ID</th>
+              <th>Player Name</th>
+              <th>添加日期</th>
+              <th style="text-align: right;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="whitelistedPlayers.length === 0" class="no-data-row">
+              <td colspan="4" class="no-data">没有白名单玩家</td>
+            </tr>
+            <tr *ngFor="let player of whitelistedPlayers; trackBy: trackByPlayerId" class="table-row">
+              <td class="whitelist-id">{{ player.playerId }}</td>
+              <td class="whitelist-name">{{ player.playerName || 'Unknown' }}</td>
+              <td class="whitelist-date">{{ player.dateAdded || 'Unknown' }}</td>
+              <td class="whitelist-actions">
+                <button class="btn btn-sm btn-ghost" 
+                        (click)="openRemoveConfirmModal(player.playerId)" 
+                        [disabled]="isLocked" 
+                        title="从白名单中移除">
+                  <i class="material-icons">person_remove</i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Message -->
+  <div *ngIf="statusMessage" class="form-group" style="grid-column: 1 / -1;">
+    <div class="status-message" [ngClass]="'status-' + statusType">
+      <i class="material-icons">{{ statusType === 'success' ? 'check_circle' : statusType === 'warning' ? 'warning' : 'error' }}</i>
+      {{ statusMessage }}
+    </div>
+  </div>
+</div>
+
+<!-- Add Player Modal -->
+<div class="modal-backdrop" *ngIf="showAddPlayerModal" (click)="closeModal()">
+  <div class="modal modal-form" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>将玩家添加到白名单</h2>
+    </div>
+    
+    <div class="modal-body">
+      <p class="section-desc">输入玩家的 EOS ID 以将其添加到白名单。</p>
+      
+      <div class="form-group">
+        <label class="form-control-label">玩家 ID (EOS ID) *</label>
+        <input type="text" 
+               class="form-control input" 
+               [(ngModel)]="newPlayerId" 
+               placeholder="输入 EOS 玩家 ID"
+               (keyup.enter)="addPlayer()"
+               autofocus />
+        <div class="form-control-label desc">玩家的 Epic Online Services (EOS) 玩家 ID。</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-control-label">玩家名称（可选）</label>
+        <input type="text" 
+               class="form-control input" 
+               [(ngModel)]="newPlayerName" 
+               placeholder="输入玩家显示名称"
+               (keyup.enter)="addPlayer()" />
+        <div class="form-control-label desc">可选的显示名称，以便于识别。</div>
+      </div>
+      
+      <div class="form-group" style="margin-top: 20px;">
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button class="btn btn-ghost" (click)="closeModal()">取消</button>
+          <button class="btn btn-ghost" 
+                  (click)="addPlayer()" 
+                  [disabled]="!newPlayerId.trim()">
+            Add Player
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Add 玩家 Modal -->
+<div class="modal-backdrop" *ngIf="showBulkAddModal" (click)="closeModal()">
+  <div class="modal modal-form" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>批量添加玩家</h2>
+    </div>
+    
+    <div class="modal-body">
+      <p class="section-desc">输入多个 EOS 玩家 ID，每行一个。</p>
+      
+      <div class="form-group">
+        <label class="form-control-label">玩家 ID（每行一个）</label>
+        <textarea class="form-control input" 
+                  rows="12" 
+                  [(ngModel)]="bulkPlayerIds" 
+                  placeholder="每行输入一个 EOS 玩家 ID..."
+                  autofocus></textarea>
+        <div class="form-control-label desc">每行输入一个 EOS 玩家 ID。空行将被忽略。</div>
+      </div>
+      
+      <div class="form-group" style="margin-top: 20px;">
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button class="btn btn-ghost" (click)="closeModal()">取消</button>
+          <button class="btn btn-ghost" 
+                  (click)="bulkAddPlayers()" 
+                  [disabled]="!bulkPlayerIds.trim()">
+            Add 玩家
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Player Confirmation Modal -->
+<div class="modal-backdrop" *ngIf="showRemoveConfirmModal" (click)="closeModal()">
+  <div class="modal modal-confirmation" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>移除玩家</h2>
+    </div>
+    
+    <div class="modal-body">
+      <p>您确定要将玩家 <strong>{{ playerToRemove }}</strong> 从白名单中移除吗？</p>
+      <p class="form-control-label desc">此操作无法撤销。</p>
+      
+      <div class="form-group" style="margin-top: 20px;">
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button class="btn btn-ghost" (click)="closeModal()">取消</button>
+          <button class="btn btn-ghost" (click)="removePlayer()">
+            Remove Player
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

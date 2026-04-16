@@ -1,0 +1,126 @@
+name: Build Electron App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python setuptools
+        run: python -m pip install setuptools
+      - name: Set Python environment variables
+        run: |
+          echo "PYTHON_EXECUTABLE=python" >> $env:GITHUB_ENV
+          echo "npm_config_python=python" >> $env:GITHUB_ENV
+          echo "npm_config_prefer_offline=true" >> $env:GITHUB_ENV
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+      - name: Clear npm cache
+        run: npm cache clean --force
+      - name: Install dependencies
+        run: npm install
+      - name: Inject CurseForge API Key
+        run: (Get-Content src/environments/environment.prod.ts) -replace 'CURSEFORGE_KEY_PLACEHOLDER', '${{ secrets.CURSEFORGE_API_KEY }}' | Set-Content src/environments/environment.prod.ts
+      - name: Build for Windows
+        run: npm run electron:package:windows
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-windows-installer
+          path: |
+            dist-electron/*.exe
+            dist-electron/*.exe.blockmap
+            dist-electron/latest.yml
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python setuptools
+        run: python -m pip install setuptools
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+      - name: Clear npm cache
+        run: npm cache clean --force
+      - name: Install dependencies
+        run: npm install
+      - name: Inject CurseForge API Key
+        run: sed -i "s|CURSEFORGE_KEY_PLACEHOLDER|${{ secrets.CURSEFORGE_API_KEY }}|g" src/environments/environment.prod.ts
+      - name: Build for Linux
+        run: npm run electron:package:linux
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-appimage
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/latest-linux.yml
+      - name: Upload Linux DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-deb
+          path: dist-electron/*.deb
+      - name: Upload Linux RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux-rpm
+          path: dist-electron/*.rpm
+
+  create-release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-windows-installer
+          path: ./release-files/
+      - name: Download Linux AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-linux-appimage
+          path: ./release-files/
+      - name: Download Linux DEB
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-linux-deb
+          path: ./release-files/
+      - name: Download Linux RPM
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-linux-rpm
+          path: ./release-files/
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ./release-files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

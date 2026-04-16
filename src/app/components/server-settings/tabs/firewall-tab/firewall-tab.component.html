@@ -1,0 +1,102 @@
+    <div class="tab-content">
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>防火墙配置</h4>
+        <p class="form-control-label desc">为您的 ARK 服务器配置防火墙规则，以允许玩家连接。</p>
+      </div>
+
+      <div class="settings-section">
+        <h5>防火墙状态和端口信息</h5>
+        <p class="section-desc">当前防火墙状态和所需端口配置。</p>
+
+        <!-- 防火墙 Status -->
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>防火墙状态</h4>
+        <div class="automation-status-row">
+          <div class="status-item-inline">
+            <span class="status-label">防火墙 Status:</span>
+            <span class="status-badge status-stopping">
+              Manual Configuration Required
+            </span>
+          </div>
+          <div class="status-item-inline">
+            <span class="status-label">平台：</span>
+            <span class="status-badge status-stopping">Linux</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Port Information -->
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>服务器端口配置</h4>
+        <div class="port-info">
+          <div class="port-item">
+            <strong>Game Port:</strong> {{ serverInstance?.gamePort || 7777 }} (UDP) - Main port for player connections
+          </div>
+          <div class="port-item" *ngIf="serverInstance?.queryPort && serverInstance.queryPort !== serverInstance.gamePort">
+            <strong>Query Port:</strong> {{ serverInstance.queryPort }} (UDP) - Steam server discovery
+          </div>
+          <div class="port-item" *ngIf="serverInstance?.rconPort">
+            <strong>RCON Port:</strong> {{ serverInstance.rconPort }} (TCP) - Remote console access
+          </div>
+        </div>
+        <div class="form-control-label desc">这些端口需要通过您的防火墙访问，以便玩家连接和服务器管理。</div>
+      </div>
+
+      <!-- Linux 防火墙 Configuration -->
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>Linux 防火墙配置</h4>
+        <div class="linux-firewall-instructions">
+          <p><strong>在 Linux 上需要手动配置防火墙。</strong> 使用以下方法之一：</p>
+
+          <h5>UFW (Ubuntu/Debian)：</h5>
+          <pre class="firewall-commands">sudo ufw allow {{ serverInstance?.gamePort || 7777 }}/udp  # Game port
+<span *ngIf="serverInstance?.queryPort && serverInstance.queryPort !== serverInstance.gamePort">sudo ufw allow {{ serverInstance.queryPort }}/udp  # Query port (Steam discovery)</span>
+<span *ngIf="serverInstance?.rconPort">sudo ufw allow {{ serverInstance.rconPort }}/tcp  # RCON port</span></pre>
+
+          <h5>防火墙d (CentOS/RHEL/Fedora)：</h5>
+          <pre class="firewall-commands">sudo firewall-cmd --permanent --add-port={{ serverInstance?.gamePort || 7777 }}/udp
+<span *ngIf="serverInstance?.queryPort && serverInstance.queryPort !== serverInstance.gamePort">sudo firewall-cmd --permanent --add-port={{ serverInstance.queryPort }}/udp</span>
+<span *ngIf="serverInstance?.rconPort">sudo firewall-cmd --permanent --add-port={{ serverInstance.rconPort }}/tcp</span>
+sudo firewall-cmd --reload</pre>
+
+          <h5>Iptables（高级用户）：</h5>
+          <pre class="firewall-commands">sudo iptables -A INPUT -p udp --dport {{ serverInstance?.gamePort || 7777 }} -j ACCEPT
+<span *ngIf="serverInstance?.queryPort && serverInstance.queryPort !== serverInstance.gamePort">sudo iptables -A INPUT -p udp --dport {{ serverInstance.queryPort }} -j ACCEPT</span>
+<span *ngIf="serverInstance?.rconPort">sudo iptables -A INPUT -p tcp --dport {{ serverInstance.rconPort }} -j ACCEPT</span></pre>
+        </div>
+        <div class="form-control-label desc">如果使用 iptables 方法，请记得保存您的 iptables 规则。</div>
+      </div>
+      </div>
+
+      <div class="settings-section">
+        <h5>路由器与网络配置</h5>
+        <p class="section-desc">外部访问的附加网络设置。</p>
+
+        <!-- Router/NAT Information -->
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>路由器与 NAT 配置</h4>
+        <p class="form-control-label desc">
+          <strong>重要提示：</strong> If your server is behind a router/NAT, you'll also need to configure port forwarding:
+        </p>
+        <ul class="firewall-notes">
+          <li>Forward Game Port {{ serverInstance?.gamePort || 7777 }} (UDP) to your server's internal IP</li>
+          <li *ngIf="serverInstance?.queryPort && serverInstance.queryPort !== serverInstance.gamePort">Forward Query Port {{ serverInstance.queryPort }} (UDP) to your server's internal IP</li>
+          <li *ngIf="serverInstance?.rconPort">Forward RCON Port {{ serverInstance.rconPort }} (TCP) to your server's internal IP (if remote access needed)</li>
+          <li>将服务器的 IP 设置为静态或使用 DHCP 保留</li>
+          <li>如果您的路由器支持，配置 UPnP 以进行自动端口转发</li>
+        </ul>
+      </div>
+
+      <div class="settings-section">
+        <h5>故障排除</h5>
+        <p class="section-desc">网络连接的常见问题和解决方案。</p>
+
+        <ul class="firewall-notes">
+          <li><strong>玩家 can't connect:</strong> 检查防火墙规则和路由器端口转发</li>
+          <li><strong>浏览器中不可见服务器：</strong> 确保查询端口已正确转发</li>
+          <li><strong>RCON 无法工作：</strong> 检查 RCON 端口防火墙规则和转发</li>
+          <li><strong>命令无法工作：</strong> 确保您具有防火墙命令的 sudo 权限</li>
+          <li><strong>规则未持久化：</strong> 一些发行版需要手动保存防火墙规则</li>
+        </ul>
+      </div>
+    </div>

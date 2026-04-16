@@ -1,0 +1,37 @@
+<div class="card rcon-card">
+  <div class="card-header button-header collapsible-header" (click)="showRcon = !showRcon">
+    <h2>RCON</h2>
+    <div class="button-header-actions">
+      <button class="btn btn-ghost" [disabled]="!rconConnected || serverState !== '运行中' || !rconMessage.trim()" (click)="$event.stopPropagation(); onSendMessage();">
+        <i class="material-icons">send</i> 发送
+      </button>
+      <span class="material-icons">
+        {{ showRcon ? 'expand_more' : 'expand_less' }}
+      </span>
+    </div>
+  </div>
+  <div class="card-body" *ngIf="showRcon">
+    <div class="rcon-status-row">
+      <span>状态：</span>
+      <span class="status-badge" [ngClass]="{
+        'status-running': rconConnected,
+        'status-stopped': !rconConnected
+      }">
+        {{ rconConnected ? '已连接' : '未连接' }}
+      </span>
+    </div>
+    <div class="rcon-send-row" *ngIf="rconConnected && serverState === '运行中'" style="width: 100%; margin-top: 0.75rem;">
+      <input #rconInput class="form-control input" style="width: 100%;" [(ngModel)]="rconMessage" placeholder="输入 RCON 命令或消息..." (keyup.enter)="onSendMessage()" (focus)="onInputFocus()" (blur)="onInputBlur()" />
+      <!-- 命令列表直接在文档流中展开，撑大 RCON 区域 -->
+      <div *ngIf="inputFocused && filteredCommands.length > 0" class="rcon-known-commands" style="width: 100%; margin-top: 4px; background: #1a2035; border: 1px solid #334155; border-radius: 8px; max-height: 280px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
+        <div *ngFor="let cmd of filteredCommands" (mousedown)="fillCommand(cmd)" class="rcon-cmd-item">
+          {{ cmd }}
+        </div>
+      </div>
+    </div>
+    <div *ngIf="lastResponse" class="rcon-response" style="background: #0a0e17; border: 1px solid #1e2a3a; border-radius: 8px; margin-top: 0.875rem; padding: 0.75rem 1rem; color: #94a3b8; font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+      <div style="font-weight: 600; color: #38bdf8; margin-bottom: 0.25rem;">上次响应：</div>
+      <div>{{ lastResponse }}</div>
+    </div>
+  </div>
+</div>

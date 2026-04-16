@@ -1,0 +1,122 @@
+    <div class="tab-content">
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <h4>服务器备份管理</h4>
+        <p class="form-control-label desc">创建和管理服务器实例文件夹的备份。</p>
+      </div>
+
+      <!-- Manual 备份 Section -->
+      <div class="settings-section">
+        <h5>手动备份</h5>
+        <p class="section-desc">立即创建服务器文件的备份。</p>
+
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-control-label">创建备份</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="btn btn-ghost" (click)="onCreateManualBackup()" [disabled]="isBackupLocked">
+              <i class="material-icons">backup</i>
+              创建备份 Now
+            </button>
+          </div>
+          <div class="form-control-label desc">立即创建服务器实例的备份。</div>
+        </div>
+      </div>
+
+      <!-- Scheduled 备份 Section -->
+      <div class="settings-section">
+        <h5>备份计划</h5>
+        <p class="section-desc">配置自动备份计划和保留设置。</p>
+        <div class="backup-schedule">
+          <div class="form-group">
+            <label class="form-control-label toggle-label">
+              <input type="checkbox" class="toggle-switch" [checked]="backupScheduleEnabled" (change)="onBackupScheduleToggle()" [disabled]="isBackupLocked" />
+              <span class="slider"></span>
+              <span class="toggle-text">启用自动备份</span>
+            </label>
+          </div>
+
+          <div *ngIf="backupScheduleEnabled" class="schedule-settings">
+            <div class="form-group">
+              <label class="form-control-label">备份频率</label>
+              <div class="custom-dropdown" [class.disabled]="isBackupLocked">
+                <button type="button" class="form-control input" [disabled]="isBackupLocked" (click)="onToggleBackupFrequencyDropdown()">
+                  <span>{{ getBackupFrequencyDisplayName(backupFrequency) || 'Select frequency...' }}</span>
+                  <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div *ngIf="backupFrequencyDropdownOpen && !isBackupLocked" class="dropdown-menu show">
+                  <div *ngFor="let opt of getBackupFrequencyOptions()" (mousedown)="onBackupFrequencySelect(opt.value)" [ngClass]="{'selected': backupFrequency === opt.value}">{{ opt.display }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="backupFrequency === 'daily' || backupFrequency === 'weekly'" class="form-group">
+              <label class="form-control-label">时间</label>
+              <input type="time" class="form-control input" [value]="backupTime" (change)="onBackupTimeChange($event)" [disabled]="isBackupLocked" />
+            </div>
+
+            <div *ngIf="backupFrequency === 'weekly'" class="form-group">
+              <label class="form-control-label">星期几</label>
+              <div class="custom-dropdown" [class.disabled]="isBackupLocked">
+                <button type="button" class="form-control input" [disabled]="isBackupLocked" (click)="onToggleBackupDayDropdown()">
+                  <span>{{ getBackupDayDisplayName(backupDayOfWeek) || 'Select day...' }}</span>
+                  <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div *ngIf="backupDayDropdownOpen && !isBackupLocked" class="dropdown-menu show">
+                  <div *ngFor="let opt of getBackupDayOptions()" (mousedown)="onBackupDaySelect(opt.value)" [ngClass]="{'selected': backupDayOfWeek === opt.value}">{{ opt.display }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-control-label">保留的最大备份数</label>
+              <input type="number" class="form-control input" min="1" max="50" [value]="maxBackupsToKeep" (blur)="onValidateField('maxBackupsToKeep', maxBackupsToKeep)" (change)="onMaxBackupsToKeepChange($event)" [disabled]="isBackupLocked" />
+              <div class="form-control-label desc">当达到此限制时，旧备份将被自动删除。</div>
+              <div *ngIf="hasFieldError('maxBackupsToKeep')" class="validation-error">{{ getFieldError('maxBackupsToKeep') }}</div>
+              <div *ngIf="hasFieldWarning('maxBackupsToKeep')" class="validation-warning">{{ getFieldWarning('maxBackupsToKeep') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 备份 List Section -->
+      <div class="settings-section">
+        <h5>可用备份</h5>
+        <p class="section-desc">管理您现有的备份 - 恢复、下载或删除。</p>
+
+        <div class="form-group backup-table-container" style="grid-column: 1 / -1;">
+        <div class="backup-list">
+          <table class="backup-table">
+            <thead>
+              <tr>
+                <th>备份名称</th>
+                <th>创建日期</th>
+                <th>文件大小</th>
+                <th style="text-align: right;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!backupList || backupList.length === 0" class="no-data-row">
+                <td colspan="4" class="no-data">没有可用备份</td>
+              </tr>
+              <tr *ngFor="let backup of backupList; trackBy: trackByBackupId" class="table-row">
+                <td class="backup-name">{{ backup.name }}</td>
+                <td class="backup-date">{{ getFormattedDate(backup.createdAt) }}</td>
+                <td class="backup-size">{{ formatFileSize(backup.size) }}</td>
+                <td class="backup-actions">
+                  <button class="btn btn-sm btn-ghost" (click)="onRestoreBackup(backup)" [disabled]="isBackupLocked" title="恢复备份">
+                    <i class="material-icons">restore</i>
+                  </button>
+                  <button class="btn btn-sm btn-ghost" (click)="onDownloadBackup(backup)" title="下载备份">
+                    <i class="material-icons">download</i>
+                  </button>
+                  <button class="btn btn-sm btn-ghost" (click)="onDeleteBackup(backup)" title="删除备份">
+                    <i class="material-icons">delete_outline</i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-control-label desc">点击恢复以用备份替换当前服务器文件，或点击删除以移除备份。</div>
+      </div>
+    </div>
+    </div>

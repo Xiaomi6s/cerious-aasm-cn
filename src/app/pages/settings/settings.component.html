@@ -1,0 +1,340 @@
+<div class="card">
+  <div class="card-header button-header collapsible-header" (click)="showSettings = !showSettings">
+    <h2>设置</h2>
+    <div class="button-header-actions">
+      <span class="material-icons">
+        {{ showSettings ? 'expand_more' : 'expand_less' }}
+      </span>
+    </div>
+  </div>
+  <div class="card-body" *ngIf="showSettings">
+    <div class="tabs">
+      <button *ngFor="let tab of tabs" 
+              class="tab"
+              [class.active]="activeTab === tab.id"
+              (click)="selectTab(tab.id)">
+        <i class="material-icons">{{ tab.icon }}</i>
+        {{ tab.label }}
+        <span *ngIf="tab.showUpdateBadge" class="update-badge" title="有可用更新">!</span>
+      </button>
+    </div>
+    
+    <!-- Server Installation Tab -->
+    <div *ngIf="activeTab === 'server-installation'">
+      <div class="action-group-settings">
+        <button class="btn btn-ghost" (click)="onInstallServer()" [disabled]="hasRunningServers" [title]="hasRunningServers ? 'Stop all running servers before installing or updating' : ''">
+          <i class="material-icons">download</i>
+          安装/更新方舟服务器
+        </button>
+
+        <button class="btn btn-ghost" (click)="onOpenConfigDirectory()" *ngIf="isElectron">
+          <i class="material-icons">folder_open</i>
+          打开配置目录
+        </button>
+
+        <button class="btn btn-ghost" (click)="onCheckForUpdates()">
+          <i class="material-icons">refresh</i>
+          检查更新
+        </button>
+      </div>
+    </div>
+
+    <!-- 通用 Settings Tab -->
+    <div *ngIf="activeTab === 'general'">
+      <div class="card sub-card">
+        <div class="card-header instance-card-header-normal">
+          <h2>通用设置</h2>
+        </div>
+        <div class="card-body">
+
+          <!-- 服务器数据目录 -->
+          <div class="settings-section vertical-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">存储</h4>
+            <div class="form-group">
+              <label class="form-control-label">服务器数据目录</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" [ngModel]="serverDataDir" [disabled]="true" class="form-control input" style="flex: 1;" placeholder="默认路径（由应用管理）" />
+                <button class="btn btn-sm btn-secondary" (click)="selectServerDataDir()" [disabled]="!isElectron" title="选择文件夹">
+                  <i class="material-icons">folder_open</i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="clearServerDataDir()" [disabled]="!isElectron || !serverDataDir" title="重置为默认值">
+                  <i class="material-icons">clear</i>
+                </button>
+              </div>
+              <label class="form-control-label desc">存储服务器数据（保存d/ShooterGame/等）的目录。更改需要重启。</label>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+              <label class="form-control-label">SteamCMD 目录</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" [ngModel]="steamCmdDir" [disabled]="true" class="form-control input" style="flex: 1;" placeholder="默认路径（由应用管理）" />
+                <button class="btn btn-sm btn-secondary" (click)="selectSteamCmdDir()" [disabled]="!isElectron" title="选择文件夹">
+                  <i class="material-icons">folder_open</i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="clearSteamCmdDir()" [disabled]="!isElectron || !steamCmdDir" title="重置为默认值">
+                  <i class="material-icons">clear</i>
+                </button>
+              </div>
+              <label class="form-control-label desc">SteamCMD 工具安装目录。更改需要重启。</label>
+            </div>
+          </div>
+
+          <!-- Auto Update -->
+          <div class="settings-section vertical-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">自动化</h4>
+            <div class="form-group">
+              <div class="form-control-label toggle-label">
+                <input type="checkbox" class="toggle-switch" [checked]="autoUpdateArkServer" (change)="onAutoUpdateArkServerChange($event)" tabindex="0" />
+                <span class="slider"></span>
+                <span class="toggle-text">自动更新方舟服务器</span>
+              </div>
+              <label class="form-control-label desc">当有可用更新时自动更新方舟服务器（定期检查）。</label>
+            </div>
+          </div>
+
+          <!-- Update Warning -->
+          <div class="settings-section vertical-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">更新警告</h4>
+            <div class="form-group">
+              <label class="form-control-label">更新警告（分钟）</label>
+              <input type="number" [ngModel]="updateWarningMinutes" (change)="onUpdateWarningMinutesChange($event.target.value)" class="form-control input" min="1" max="60" />
+              <label class="form-control-label desc">自动更新前多少分钟向玩家广播警告（通过 RCON）。</label>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+    </div>
+    
+    <!-- Web Server Tab -->
+    <div *ngIf="activeTab === 'web-server'">
+      <div class="card sub-card">
+        <div class="card-header button-header">
+          <h2>Web 服务器状态</h2>
+          <div class="button-header-actions">
+            <button class="btn" *ngIf="!webServerRunning" (click)="onStartWebServer()" [disabled]="!isElectron">
+              <i class="material-icons">play_arrow</i> Start
+            </button>
+            <button class="btn" *ngIf="webServerRunning" (click)="onStopWebServer()" [disabled]="!isElectron">
+              <i class="material-icons">stop</i> Stop
+            </button>
+          </div>
+        </div>
+        <div class="card-body ">
+          <div>
+            <span>状态：</span>
+            <span class="status-badge" [ngClass]="webServerRunning ? 'status-running' : 'status-stopped'">
+              {{ webServerRunning ? '运行中' : '已停止' }}
+            </span>
+          </div>
+          <br />
+          <div *ngIf="!webServerRunning">
+            Web 服务器未运行。点击“启动”以启动 Web 界面服务器。
+          </div>
+        </div>
+      </div>
+      <div class="card sub-card">
+        <div class="card-header instance-card-header-normal">
+          <h2>服务器设置</h2>
+        </div>
+        <div class="card-body ">
+          <div class="settings-section vertical-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">端口</h4>
+            <div class="form-group">
+              <label class="form-control-label">端口</label>
+              <input type="number" min="1024" max="65535" [ngModel]="webServerPort" (ngModelChange)="onPortChange($event)" [disabled]="webServerRunning" class="form-control input" />
+              <label class="form-control-label desc">Web 服务器的端口号（1024-65535）</label>
+            </div>
+            <div class="form-group">
+              <div class="form-control-label toggle-label">
+                <input type="checkbox" class="toggle-switch" [checked]="startWebServerOnLoad" (change)="onStartOnLoadChange($event.target.checked)" tabindex="0" />
+                <span class="slider"></span>
+                <span class="toggle-text">应用启动时启动 Web 服务器</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section vertical-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">身份验证</h4>
+            <div class="form-group">
+              <div class="form-control-label toggle-label">
+                <input type="checkbox" class="toggle-switch" [checked]="authenticationEnabled" (change)="onAuthenticationEnabledChange($event.target.checked)" [disabled]="webServerRunning" tabindex="0" />
+                <span class="slider"></span>
+                <span class="toggle-text">启用身份验证</span>
+              </div>
+              <label class="form-control-label desc">需要用户名和密码才能访问 Web 界面</label>
+            </div>
+            <div *ngIf="authenticationEnabled" class="form-group">
+              <label class="form-control-label">用户名</label>
+              <input type="text" [ngModel]="authenticationUsername" (input)="authenticationUsername = $event.target.value" (blur)="onAuthenticationUsernameChange($event.target.value)" [disabled]="webServerRunning" class="form-control input" placeholder="输入用户名" />
+              <label class="form-control-label desc">Web 界面登录的用户名</label>
+            </div>
+            <div *ngIf="authenticationEnabled" class="form-group">
+              <label class="form-control-label">密码</label>
+              <input type="password" [ngModel]="authenticationPassword" (input)="authenticationPassword = $event.target.value" (blur)="onAuthenticationPasswordChange($event.target.value)" [disabled]="webServerRunning" class="form-control input" placeholder="输入密码" />
+              <label class="form-control-label desc">Web 界面登录的密码</label>
+            </div>
+            <div *ngIf="authenticationEnabled && (!authenticationUsername.trim() || !authenticationPassword.trim())" class="form-group">
+              <label class="form-control-label desc" style="color: #d73527; font-style: italic;">
+                ⚠ 请在上方输入用户名和密码以完成身份验证设置。
+              </label>
+            </div>
+            <div *ngIf="authenticationEnabled && webServerRunning" class="form-group">
+              <div class="status-info">
+                <i class="material-icons">info</i>
+                <span>Web 服务器运行时无法更改身份验证设置。请停止服务器以进行更改。</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 备份 Settings Section -->
+          <div class="settings-section">
+            <h4 style="color: #0ea5e9; margin-bottom: 1rem;">备份下载</h4>
+            <div class="form-group">
+              <label class="form-control-label">最大下载大小（MB）</label>
+              <input type="number" 
+                     [ngModel]="maxBackupDownloadSizeMB" 
+                     (input)="maxBackupDownloadSizeMB = +$event.target.value" 
+                     (blur)="onMaxBackupDownloadSizeChange($event.target.value)" 
+                     class="form-control input" 
+                     min="1" 
+                     max="2048" 
+                     placeholder="100" />
+              <div class="form-control-label desc">
+                在 Web 浏览器中下载备份的最大文件大小。较大的备份将显示警告并需要桌面应用访问。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Tab -->
+    <div *ngIf="activeTab === 'about'">
+      <div class="about-container">
+        <!-- Header Section -->
+        <div class="about-header">
+          <div class="about-title-section">
+            <img src="assets/logo.png" alt="Cerious AASM Logo" class="about-logo">
+            <h1 class="about-title">Cerious AASM</h1>
+            <p class="about-subtitle">ARK: Survival Ascended Server Manager</p>
+            <div class="about-version">版本 {{ getAppVersion() }}</div>
+          </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="about-content-grid">
+          <!-- 功能特性 Section -->
+          <div class="about-section features-section">
+            <h2 class="section-title">功能特性</h2>
+            <div class="features-list">
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">多服务器管理</span>
+              </div>
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">自动服务器安装</span>
+              </div>
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">RCON 集成</span>
+              </div>
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">模组管理</span>
+              </div>
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">备份系统</span>
+              </div>
+              <div class="feature-item">
+                <i class="material-icons feature-check">check_circle</i>
+                <span class="feature-text">实时监控</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 系统信息 Section -->
+          <div class="about-section system-info-section">
+            <h2 class="section-title">系统信息</h2>
+            <div class="system-info-list">
+              <div class="system-info-item">
+                <i class="material-icons system-icon">computer</i>
+                <span class="system-text">平台： {{ getPlatform() }}</span>
+              </div>
+              <div class="system-info-item">
+                <i class="material-icons system-icon">memory</i>
+                <span class="system-text">Node.js： {{ getNodeVersion() }}</span>
+              </div>
+              <div class="system-info-item">
+                <i class="material-icons system-icon">desktop_windows</i>
+                <span class="system-text">Electron： {{ getElectronVersion() }}</span>
+              </div>
+              <div class="system-info-item">
+                <i class="material-icons system-icon">folder</i>
+                <span class="system-text">配置： {{ getConfigPath() }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="about-footer">
+          <p>&copy; 2025 r YOU cerious. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-modal 
+  [title]="'正在安装方舟飞升服务器'" 
+  [show]="showInstallModal" 
+  (close)="onCancelInstall()">
+  <div class="install-phase">
+    <div class="install-phase-header"
+         [class.text-error]="installProgress?.failed"
+         [class.text-success]="installProgress?.success">
+      {{installProgress?.step}}
+    </div>
+    <div class="install-phase-desc"
+         [class.text-error]="installProgress?.failed">{{installProgress?.message}}</div>
+    <div class="install-progress-bar">
+      <div [style.width.%]="installProgress?.percent"
+           class="install-progress-bar-inner"
+           [class.error]="installProgress?.failed"></div>
+    </div>
+  </div>
+  <div class="action-group-modal">
+    <button class="btn" (click)="onCancelInstall()" *ngIf="installProgress && !installProgress.blocked && !installProgress.success && !installProgress.failed">取消安装</button>
+    <button class="btn" (click)="onCloseInstall()" *ngIf="installProgress?.blocked || installProgress?.success || installProgress?.failed">关闭</button>
+  </div>
+</app-modal>
+
+<app-modal 
+  [title]="'需要 Sudo 密码'" 
+  [show]="showSudoPasswordModal" 
+  (close)="onSudoPasswordCancel()">
+  <div class="sudo-password-content">
+    <p>需要安装 Linux 依赖项。请输入您的 sudo 密码以继续：</p>
+    <div class="form-group">
+      <label for="sudoPassword">Sudo 密码：</label>
+      <input 
+        type="password" 
+        id="sudoPassword"
+        [(ngModel)]="sudoPassword" 
+        placeholder="输入您的 sudo 密码"
+        class="form-control"
+        (keyup.enter)="onSudoPasswordConfirm()" />
+    </div>
+    <p class="sudo-disclaimer">
+      您的密码仅临时用于安装所需的系统包，不会被存储。
+    </p>
+  </div>
+  <div class="action-group-modal">
+    <button class="btn" (click)="onSudoPasswordCancel()">取消</button>
+    <button class="btn" (click)="onSudoPasswordConfirm()" [disabled]="!sudoPassword.trim()">继续</button>
+  </div>
+</app-modal>
